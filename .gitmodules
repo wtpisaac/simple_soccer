@@ -1,3 +1,6 @@
 [submodule "vendored/raylib"]
 	path = vendored/raylib
 	url = https://github.com/raysan5/raylib.git
+[submodule "vendored/quill"]
+	path = vendored/quill
+	url = https://github.com/odygrd/quill.git

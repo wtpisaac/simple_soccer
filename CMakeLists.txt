@@ -34,7 +34,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_executable(
     birbs
     src/main.cpp
-    src/ecs/entity_manager.cpp
 )
 
 set_property(
@@ -52,6 +51,9 @@ set_property(
     ON
 )
 
+add_subdirectory(
+    vendored/entt
+)
 add_subdirectory(
     vendored/raylib
 )

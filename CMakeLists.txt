@@ -18,6 +18,7 @@ set(
     CMAKE_CXX_STANDARD_REQUIRED
     ON
 )
+add_compile_options(-Wno-deprecated-declarations)
 enable_testing()
 
 option(
@@ -61,11 +62,22 @@ add_subdirectory(
     vendored/quill
 )
 
+# Raygui does not include a header, so we just define an interface library and
+# link it
+add_library(raygui INTERFACE)
+target_include_directories(
+    raygui
+    INTERFACE
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendored/raygui"
+)
+
 target_link_libraries(
     birbs
     PRIVATE
+    EnTT::EnTT
     quill
     raylib
+    raygui
 )
 
 if(ENABLE_ASAN)

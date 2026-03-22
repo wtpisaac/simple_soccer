@@ -9,8 +9,7 @@
 
 int main()
 {
-    QUILL_LOG_INFO(
-        BIRBS_LOGGER,
+    VOX_LOG_INFO(
         "birbs!"
     );
 
@@ -33,8 +32,7 @@ int main()
     }
 
     // Close up
-    QUILL_LOG_INFO(
-        BIRBS_LOGGER,
+    VOX_LOG_INFO(
         "birbs closing!"
     );
     CloseWindow();

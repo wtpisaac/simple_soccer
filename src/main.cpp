@@ -42,9 +42,9 @@ struct Triangle {
 
     Triangle rotate(float angle) {
         return Triangle {
-            .v1 = Vector2Rotate(this->v1, angle),
-            .v2 = Vector2Rotate(this->v2, angle),
-            .v3 = Vector2Rotate(this->v3, angle)
+            .v1 = Vector2Rotate(this->v1, angle*DEG2RAD),
+            .v2 = Vector2Rotate(this->v2, angle*DEG2RAD),
+            .v3 = Vector2Rotate(this->v3, angle*DEG2RAD)
         };
     }
 
@@ -60,15 +60,15 @@ struct Triangle {
 constexpr Triangle TRIANGLE_EQ = Triangle {
     .v1 = Vector2{
         .x = 0.0,
-        .y = (ENTITY_SIZE / 2.0)
+        .y = -1.0 * (ENTITY_SIZE / 2.0)
     },
     .v2 = Vector2 {
-        .x = -1.0 * (ENTITY_SIZE / 2.0),
-        .y = -1.0 * (ENTITY_SIZE / 2.0)
+        .x = -0.8 * (ENTITY_SIZE / 2.0),
+        .y = 1.0 * (ENTITY_SIZE / 2.0)
     },
     .v3 = Vector2{
-        .x = (ENTITY_SIZE / 2.0),
-        .y = -1.0 * (ENTITY_SIZE / 2.0)
+        .x = 0.8 * (ENTITY_SIZE / 2.0),
+        .y = 1.0 * (ENTITY_SIZE / 2.0)
     }
 };
 
@@ -77,14 +77,22 @@ constexpr Vector2 ARENA_OFFSET = Vector2 {
     .y = ARENA_PANEL_HEIGHT / 2.0
 };
 
+float rotationFromVector(
+    Vector2 vec
+) {
+    auto nvec = Vector2Normalize(vec);
+    auto rads = Vector2Angle(
+        Vector2{.y = -1.0}, 
+        nvec
+    );
+    auto degs = (rads * RAD2DEG);
+    return degs;
+}
+
 /* === ECS Definitions ===================================================== */
 
 struct Position {
     Vector2 pos;
-};
-
-struct Heading {
-    float heading;
 };
 
 struct Velocity {
@@ -140,7 +148,6 @@ void processMouseInput(
     
     heading = 
         static_cast<float>(GetRandomValue(0, 359));
-    registry.emplace<Heading>(newEntity, heading);
 
     // Create initial velocity vector
     vel = Vector2Scale(
@@ -171,9 +178,10 @@ void processInput(
 void acceleration_system(
     entt::registry &registry
 ) {
-    auto view = registry.view<Velocity, const Heading>();
+    auto view = registry.view<Velocity>();
 
-    view.each([&registry](Velocity &vel, const Heading &heading) {
+    view.each([&registry](Velocity &vel) {
+        auto normalized = Vector2Normalize(vel.velocity);
         auto magnitude = Vector2Length(vel.velocity);
         auto change = Clamp(
             ENTITY_DESIRED_MAX_SPEED - magnitude,
@@ -182,10 +190,7 @@ void acceleration_system(
         );
         auto newMagnitude = magnitude + change;
         vel.velocity = Vector2Scale(
-        Vector2Normalize(Vector2Rotate(
-                Vector2{ .y = 1.0 }, 
-                heading.heading
-            )), 
+            normalized,
             newMagnitude
         );
     });
@@ -257,32 +262,34 @@ void renderUI(
 void renderBirbs(
     entt::registry& registry
 ) {
-    auto view = registry.view<const Position, const Heading>();
+    auto view = registry.view<const Position, const Velocity>();
 
-    view.each([](const Position &pos, const Heading &heading){
+    view.each([](const Position &pos, const Velocity &vel){
+        auto rotation = rotationFromVector(vel.velocity);
+
         auto entityInteriorTriangle = TRIANGLE_EQ;
         entityInteriorTriangle = entityInteriorTriangle.scaled(ENTITY_INTERIOR_SCALE);
-        entityInteriorTriangle = entityInteriorTriangle.rotate(heading.heading);
+        entityInteriorTriangle = entityInteriorTriangle.rotate(rotation);
         entityInteriorTriangle = entityInteriorTriangle.move(
             pos.pos
         );
 
         auto entityStrokeTriangle = TRIANGLE_EQ;
-        entityStrokeTriangle = entityStrokeTriangle.rotate(heading.heading);
+        entityStrokeTriangle = entityStrokeTriangle.rotate(rotation);
         entityStrokeTriangle = entityStrokeTriangle.move(
             pos.pos
         );
 
         DrawTriangle(
-            entityStrokeTriangle.v3,
-            entityStrokeTriangle.v2,
             entityStrokeTriangle.v1,
+            entityStrokeTriangle.v2,
+            entityStrokeTriangle.v3,
             BLACK
         );
         DrawTriangle(
-            entityInteriorTriangle.v3,
-            entityInteriorTriangle.v2,
             entityInteriorTriangle.v1,
+            entityInteriorTriangle.v2,
+            entityInteriorTriangle.v3,
             WHITE
         );
     });

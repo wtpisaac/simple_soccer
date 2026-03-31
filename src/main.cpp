@@ -1,3 +1,4 @@
+#include "entt/entity/entity.hpp"
 #include "entt/entity/fwd.hpp"
 #include <cstdlib>
 
@@ -30,6 +31,8 @@
 
 #define PRIORITY_WALL 0.8
 #define PRIORITY_SPEED 0.2
+
+#define NEIGHBORHOOD_CELL_SIZE 60.0
 
 #define APPLICATION_TITLE "birbs"
 
@@ -78,6 +81,22 @@ constexpr Triangle TRIANGLE_EQ = Triangle {
     }
 };
 
+struct IVec2 {
+    int x;
+    int y;
+    bool operator==(const IVec2&) const = default;
+};
+
+template<>
+struct std::hash<IVec2> {
+    std::size_t operator()(const IVec2& v) const noexcept {
+        auto hash = std::hash<int>{}(v.x);
+        // hash combine algorithm from Boost - no clue how this works...
+        hash ^= std::hash<int>{}(v.y) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        return hash;
+    }
+};
+
 constexpr Vector2 ARENA_OFFSET = Vector2 {
     .x = ARENA_PANEL_WIDTH / 2.0,
     .y = ARENA_PANEL_HEIGHT / 2.0
@@ -94,6 +113,73 @@ float rotationFromVector(
     auto degs = (rads * RAD2DEG);
     return degs;
 }
+
+class Neighborhood {
+public:
+    IVec2
+    addEntityToNeighborhood(
+        entt::entity entity,
+        IVec2 iCoordinates
+    ) {
+        auto& list = this->map[iCoordinates];
+        list.push_back(entity);
+        return iCoordinates;
+    }
+
+    void
+    removeEntityFromNeighborhood(
+        entt::entity entity,
+        IVec2 iCoordinates
+    ) {
+        auto& list = this->getNeighborhoodListRef(iCoordinates);
+        std::erase(list, entity);
+    }
+
+    std::vector<entt::entity>&
+    getNeighborhoodListRef(
+        IVec2 coordinates
+    ) {
+        auto& list = this->map[coordinates];
+        return list;
+    }
+
+    std::vector<entt::entity>&
+    getNeighborhoodListRef(
+        Vector2 coordinates
+    ) {
+        auto iCoordinates = vecToNeighborhoodIVec(coordinates);
+        auto& list = this->map[iCoordinates];
+        return list;
+    }
+
+    static
+    IVec2 vecToNeighborhoodIVec(
+        Vector2 fVec
+    ) {
+        auto x = static_cast<int>(fVec.x / NEIGHBORHOOD_CELL_SIZE);
+        auto y = static_cast<int>(fVec.y / NEIGHBORHOOD_CELL_SIZE);
+
+        return IVec2 {
+            .x = x,
+            .y = y
+        };
+    };
+private:
+    /*
+        Making a sidenote - we would need to think about having this map more 
+        carefully if we were parallelizing this, either by making sure the
+        neighborhood was not updated during other operations, since the
+        unordered dense does not preserve stability of pointers for mutating
+        operations.
+
+        In our case, we will update neighborhood positions in a distinct
+        phase from making use of the array pointers, and those pointers
+        will not live long, and we are not doing any parallel logic for
+        this demo, so none of this matters too much.
+    */
+
+    ankerl::unordered_dense::map<IVec2, std::vector<entt::entity>> map;
+};
 
 /* === ECS Definitions ===================================================== */
 
@@ -124,6 +210,10 @@ struct Followed {
 
 struct ToDelete {};
 
+struct Neighborhoodable {
+    IVec2 lastSetICoordinates;
+};
+
 /* AI Behavior Definitions
 
 Space to take some notes from the book:
@@ -143,6 +233,7 @@ start with random flights
 
 struct GameState {
     entt::registry registry;
+    Neighborhood neighborhood;
     entt::entity pack_leader { entt::null };
     entt::entity pack_trailer { entt::null };
 };
@@ -180,14 +271,25 @@ void processMouseInput(
     } else {
         gameState.registry.emplace<Following>(newEntity, gameState.pack_trailer);
         gameState.registry.emplace<Followed>(gameState.pack_trailer, Followed {
-            .desiredFollowerPosition = gameState.registry.get<Position>(gameState.pack_trailer).pos,
-            .follower = newEntity
+            .follower = newEntity,
+            .desiredFollowerPosition = gameState.registry.get<Position>(gameState.pack_trailer).pos
         });
 
         gameState.pack_trailer = newEntity;
     }
 
     gameState.registry.emplace<Position>(newEntity, pos);
+    IVec2 neighborhoodCoordinates = Neighborhood::vecToNeighborhoodIVec(pos);
+    gameState.neighborhood.addEntityToNeighborhood(
+        newEntity,
+        neighborhoodCoordinates
+    );
+    gameState.registry.emplace<Neighborhoodable>(
+        newEntity,
+        Neighborhoodable {
+            .lastSetICoordinates = neighborhoodCoordinates
+        }
+    );
     
     heading = 
         static_cast<float>(GetRandomValue(0, 359));
@@ -343,6 +445,7 @@ void basic_flight(
 }
 
 // TODO: Deletion support for following system
+// TODO: Deletion support for neighborhood system
 
 void delete_outside_bounds(
     entt::registry& registry
@@ -407,6 +510,35 @@ void deletable_system(
     });
 }
 
+void update_neighborhoods_system(
+    GameState &gameState
+) {
+    auto view = gameState.registry.view<const Position, Neighborhoodable>();
+
+    view.each([&gameState](entt::entity entity, const Position &pos, Neighborhoodable &neighborhood) {
+        IVec2 newICoordinates = Neighborhood::vecToNeighborhoodIVec(pos.pos);
+        if(newICoordinates != neighborhood.lastSetICoordinates) {
+            BIRBS_LOG_INFO(
+                "birb {}, N {} {} -> N {} {}",
+                entt::to_integral(entity),
+                neighborhood.lastSetICoordinates.x,
+                neighborhood.lastSetICoordinates.y,
+                newICoordinates.x,
+                newICoordinates.y
+            );
+            gameState.neighborhood.removeEntityFromNeighborhood(
+                entity,
+                neighborhood.lastSetICoordinates
+            );
+            gameState.neighborhood.addEntityToNeighborhood(
+                entity,
+                newICoordinates
+            );
+            neighborhood.lastSetICoordinates = newICoordinates;
+        }
+    });
+}
+
 void update(
     GameState &gameState
 ) {
@@ -417,6 +549,7 @@ void update(
 
     basic_flight(gameState.registry);
     update_follower_positions(gameState.registry);
+    update_neighborhoods_system(gameState);
 
     delete_outside_bounds(gameState.registry);
     deletable_system(gameState.registry);

@@ -1,5 +1,3 @@
-#include "entt/entity/entity.hpp"
-#include "entt/entity/fwd.hpp"
 #include <cstdlib>
 
 #include <ankerl/unordered_dense.h>
@@ -14,48 +12,84 @@
 
 #include "core/logger.hpp"
 
-#define WINDOW_WIDTH 1280
-#define WINDOW_HEIGHT 720
+/* === Constants =========================================================== */
+// Window
+constexpr int WINDOW_WIDTH = 1316;
+constexpr int WINDOW_HEIGHT = 720;
 
-#define ARENA_PANEL_PADDING_TOP 0
-#define ARENA_PANEL_PADDING_SIDES 0
-#define ARENA_PANEL_HEIGHT WINDOW_HEIGHT
-#define ARENA_PANEL_WIDTH WINDOW_WIDTH
-#define ARENA_PANEL_X 0 + ARENA_PANEL_PADDING_SIDES
-#define ARENA_PANEL_Y ARENA_PANEL_PADDING_TOP
+// Pitch 
+constexpr int PITCH_PANEL_PADDING_TOP = 16;
+constexpr int PITCH_PANEL_PADDING_SIDES = 16;
+constexpr int PITCH_PANEL_HEIGHT = WINDOW_HEIGHT - (2 * PITCH_PANEL_PADDING_TOP);
+constexpr int PITCH_PANEL_WIDTH = WINDOW_WIDTH - (2 * PITCH_PANEL_PADDING_SIDES);
+constexpr int PITCH_PANEL_X = 0 + PITCH_PANEL_PADDING_SIDES;
+constexpr int PITCH_PANEL_Y = PITCH_PANEL_PADDING_TOP;
 
-#define ENTITY_SIZE 20.0
-#define ENTITY_INTERIOR_SCALE 0.8
-#define ENTITY_ACCELERATION 0.25
-#define ENTITY_DESIRED_MAX_SPEED 3.0
+// Pitch Border
+constexpr int PITCH_BORDER_X = PITCH_PANEL_X - PITCH_PANEL_PADDING_SIDES;
+constexpr int PITCH_BORDER_Y = PITCH_PANEL_Y - PITCH_PANEL_PADDING_TOP;
+constexpr int PITCH_BORDER_WIDTH = PITCH_PANEL_WIDTH + (2 * PITCH_PANEL_PADDING_SIDES);
+constexpr int PITCH_BORDER_HEIGHT = PITCH_PANEL_HEIGHT + (2 * PITCH_PANEL_PADDING_TOP);
 
-#define PRIORITY_WALL 0.8
-#define PRIORITY_SPEED 0.2
+// Pitch Regions
+constexpr int PITCH_REGIONS_VERTICAL = 3;
+constexpr int PITCH_REGIONS_HORIZONTAL = 6;
+constexpr int PITCH_REGION_WIDTH = PITCH_PANEL_WIDTH / PITCH_REGIONS_HORIZONTAL;
+constexpr int PITCH_REGION_HEIGHT = PITCH_PANEL_HEIGHT / PITCH_REGIONS_VERTICAL;
 
-#define NEIGHBORHOOD_CELL_SIZE 60.0
+// Pitch Lines
+constexpr float GOAL_OFFSET = static_cast<float>(PITCH_REGION_WIDTH) / 3.0f;
+constexpr float CENTER_CIRCLE_RADIUS = static_cast<float>(PITCH_REGION_WIDTH);
 
-#define APPLICATION_TITLE "Simple Soccer"
+// Neighborhood Processing
+constexpr float NEIGHBORHOOD_CELL_SIZE = 60.0;
 
+// Application Title
+constexpr const char* APPLICATION_TITLE = "Simple Soccer";
+
+// Fundamental Structures
 struct IVec2 {
     int x;
     int y;
     bool operator==(const IVec2&) const = default;
 };
 
-template<>
-struct std::hash<IVec2> {
-    std::size_t operator()(const IVec2& v) const noexcept {
-        auto hash = std::hash<int>{}(v.x);
-        // hash combine algorithm from Boost - no clue how this works...
-        hash ^= std::hash<int>{}(v.y) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-        return hash;
-    }
-};
+// Coordinate conversion for pitch panel
+template <typename T>
+constexpr T
+pitchPanelX(
+    T x
+) {
+    return x + PITCH_PANEL_X;
+}
 
-constexpr Vector2 ARENA_OFFSET = Vector2 {
-    .x = ARENA_PANEL_WIDTH / 2.0,
-    .y = ARENA_PANEL_HEIGHT / 2.0
-};
+template <typename T>
+constexpr T
+pitchPanelY(
+    T y
+) {
+    return y + PITCH_PANEL_Y;
+}
+
+constexpr Vector2
+pitchPanelCoordinate(
+    Vector2 v
+) {
+    return Vector2 {
+        v.x + PITCH_PANEL_X,
+        v.y + PITCH_PANEL_Y
+    };
+}
+
+constexpr IVec2
+pitchPanelCoordinate(
+    IVec2 v
+) {
+    return IVec2 {
+        .x = v.x + PITCH_PANEL_X,
+        .y = v.y + PITCH_PANEL_Y
+    };
+}
 
 float rotationFromVector(
     Vector2 vec
@@ -68,6 +102,16 @@ float rotationFromVector(
     auto degs = (rads * RAD2DEG);
     return degs;
 }
+
+template<>
+struct std::hash<IVec2> {
+    std::size_t operator()(const IVec2& v) const noexcept {
+        auto hash = std::hash<int>{}(v.x);
+        // hash combine algorithm from Boost - no clue how this works...
+        hash ^= std::hash<int>{}(v.y) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        return hash;
+    }
+};
 
 class Neighborhood {
 public:
@@ -248,24 +292,79 @@ void update(
 void renderUI(
     bool& shouldExit
 ) {
-    // shouldExit = GuiWindowBox(
-    //     Rectangle { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT },
-    //     APPLICATION_TITLE
-    // );
     shouldExit = false;
 }
 
-void renderArena(
+void renderPitch(
     entt::registry& registry
 ) {
+    // Draw bordered area under pitch 
+    DrawRectangleRec(
+        Rectangle {
+            .x = PITCH_BORDER_X, 
+            .y = PITCH_BORDER_Y,
+            .width = PITCH_BORDER_WIDTH,
+            .height = PITCH_BORDER_HEIGHT
+        },
+        DARKGRAY
+    );
     BeginScissorMode(
-        ARENA_PANEL_X, 
-        ARENA_PANEL_Y,
-        ARENA_PANEL_WIDTH,
-        ARENA_PANEL_HEIGHT
+        PITCH_PANEL_X, 
+        PITCH_PANEL_Y,
+        PITCH_PANEL_WIDTH,
+        PITCH_PANEL_HEIGHT
     );
 
     ClearBackground(GREEN);
+
+    // Draw goals
+    // Left goal
+    DrawLineEx(
+        Vector2 { (float)pitchPanelX(0), (float)pitchPanelY((PITCH_PANEL_HEIGHT / 2) + (PITCH_REGION_HEIGHT / 2)) },
+        Vector2 { (float)pitchPanelX(GOAL_OFFSET), (float)pitchPanelY((PITCH_PANEL_HEIGHT / 2) + (PITCH_REGION_HEIGHT / 2)) },
+        2.0f, WHITE
+    );
+    DrawLineEx(
+        Vector2 { (float)pitchPanelX(0), (float)pitchPanelY((PITCH_PANEL_HEIGHT / 2) - (PITCH_REGION_HEIGHT / 2)) },
+        Vector2 { (float)pitchPanelX(GOAL_OFFSET), (float)pitchPanelY((PITCH_PANEL_HEIGHT / 2) - (PITCH_REGION_HEIGHT / 2)) },
+        2.0f, WHITE
+    );
+    DrawLineEx(
+        Vector2 { (float)pitchPanelX(GOAL_OFFSET), (float)pitchPanelY((PITCH_PANEL_HEIGHT / 2) - (PITCH_REGION_HEIGHT / 2)) },
+        Vector2 { (float)pitchPanelX(GOAL_OFFSET), (float)pitchPanelY((PITCH_PANEL_HEIGHT / 2) + (PITCH_REGION_HEIGHT / 2)) },
+        2.0f, WHITE
+    );
+
+    // Right Goal
+    DrawLineEx(
+        Vector2 { (float)pitchPanelX(PITCH_PANEL_WIDTH - GOAL_OFFSET), (float)pitchPanelY((PITCH_PANEL_HEIGHT / 2) + (PITCH_REGION_HEIGHT / 2)) },
+        Vector2 { (float)pitchPanelX(PITCH_PANEL_WIDTH), (float)pitchPanelY((PITCH_PANEL_HEIGHT / 2) + (PITCH_REGION_HEIGHT / 2)) },
+        2.0f, WHITE
+    );
+    DrawLineEx(
+        Vector2 { (float)pitchPanelX(PITCH_PANEL_WIDTH - GOAL_OFFSET), (float)pitchPanelY((PITCH_PANEL_HEIGHT / 2) - (PITCH_REGION_HEIGHT / 2)) },
+        Vector2 { (float)pitchPanelX(PITCH_PANEL_WIDTH), (float)pitchPanelY((PITCH_PANEL_HEIGHT / 2) - (PITCH_REGION_HEIGHT / 2)) },
+        2.0f, WHITE
+    );
+    DrawLineEx(
+        Vector2 { (float)pitchPanelX(PITCH_PANEL_WIDTH - GOAL_OFFSET), (float)pitchPanelY((PITCH_PANEL_HEIGHT / 2) - (PITCH_REGION_HEIGHT / 2)) },
+        Vector2 { (float)pitchPanelX(PITCH_PANEL_WIDTH - GOAL_OFFSET), (float)pitchPanelY((PITCH_PANEL_HEIGHT / 2) + (PITCH_REGION_HEIGHT / 2)) },
+        2.0f, WHITE
+    );
+    // Draw center circle
+    DrawRing(
+        Vector2 { (float)pitchPanelX(PITCH_PANEL_WIDTH / 2), (float)pitchPanelY(PITCH_PANEL_HEIGHT / 2) },
+        CENTER_CIRCLE_RADIUS - 1.0f,
+        CENTER_CIRCLE_RADIUS + 1.0f,
+        0.0f, 360.0f, 64, WHITE
+    );
+
+    // Draw dividing line
+    DrawLineEx(
+        Vector2 { (float)pitchPanelX(PITCH_PANEL_WIDTH / 2), (float)pitchPanelY(0) },
+        Vector2 { (float)pitchPanelX(PITCH_PANEL_WIDTH / 2), (float)pitchPanelY(PITCH_PANEL_HEIGHT) },
+        2.0f, WHITE
+    );
 
     EndScissorMode();
 }
@@ -278,7 +377,7 @@ void render(
     ClearBackground(RED);
 
     renderUI(shouldExit);
-    renderArena(registry);
+    renderPitch(registry);
 
     EndDrawing();
 }

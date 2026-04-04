@@ -6,7 +6,7 @@ cmake_minimum_required(
 
 # we need to give a project name or we get a warning
 project(
-    Birbs
+    SimpleSoccer
 )
 # set C++ to 20 and cause an error if you're not using that.
 # i really wonder why that isn't a default?
@@ -33,20 +33,20 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # create an executable target which calls into the library code
 # so we can next have a test target which also calls into the library
 add_executable(
-    birbs
+    simplesoccer
     src/main.cpp
 )
 
 set_property(
     TARGET
-    birbs
+    simplesoccer
     PROPERTY
     CXX_STANDARD
     20
 )
 set_property(
     TARGET
-    birbs
+    simplesoccer
     PROPERTY
     CXX_STANDARD_REQUIRED
     ON
@@ -75,7 +75,7 @@ target_include_directories(
 )
 
 target_link_libraries(
-    birbs
+    simplesoccer
     PRIVATE
     EnTT::EnTT
     quill
@@ -117,7 +117,7 @@ if(ENABLE_ASAN)
     endif()
 
     target_link_libraries(
-        birbs
+        simplesoccer
         PRIVATE
         asan
     )

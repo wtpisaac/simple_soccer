@@ -194,18 +194,114 @@ struct Neighborhoodable {
     IVec2 lastSetICoordinates;
 };
 
-/* AI Behavior Definitions
+/* === AI Behavior Definitions ============================================= */
 
-Space to take some notes from the book:
+enum struct FieldPlayerState {
+    /*
+        WAIT at steering position, and correct if jostled by player collision
 
-- Entities should have steering behaviors
-- These should probably be weighted but choosing the weights is difficult
-- You can do a prioritization algorithm to allocate forces instead. might be worth trying
-that up front since balancing the weights dynamically seems like a harder variant of this
-- probably worth creating a chaining behavior to push away from entities but target a tail?
+        WHEN has just kicked ball
+        UNTIL
+        - upfield of player controlling ball in order to advance ball, OR
+        - ball is closest to player and no other receiving player
+    */
+    WAIT,
+    /*
+        RECEIVE_BALL, go to intercept the ball. Either by:
+        - _Arrive_ if no urgency, OR
+        - _Pursuit_ if urgent. (See book formula)
+        
+        WHEN player is instructed to RECEIVE_BALL
+        UNTIL
+        - close to the ball, OR
+        - opposing team has control of the ball
+        THEN CHASE_BALL
+    */
+    RECEIVE_BALL,
+    /*
+        _Seek_ to the ball's current position
 
-start with random flights
-*/
+        WHEN
+        - waiting and closest w/ no receiver, OR
+        - wants to kick, but exceeded frequency, OR
+        - after dribble kick (case of above?)
+
+        UNTIL within kicking range -> KICK_BALL
+    */
+    CHASE_BALL,
+    /*
+        RETURN_TO_HOME_REGION 
+        WHEN signalled to return
+        UNTIL ???
+    */
+    RETURN_TO_HOME_REGION,
+    /*
+        KICK_BALL procedure
+        1. Are we timed out of kick? If so, -> DRIBBLE
+        2. Are we behind the ball? If not, -> CHASE_BALL
+        3. We are able to kick the ball.
+        4a. If good shot possible, do so.
+        4b. If no goal is possible, and threatened by another player, pass ball
+        to upfield player which is safest and tell it to RECEIVE_BALL. 
+            -> WAIT (?)
+        4c. If not threatened, move to step 5.
+        4d. Kick, -> WAIT.
+        5. If no threat, no goal shot possible -> DRIBBLE
+        
+        WHEN ball is within kicking distance of the player
+    */
+    KICK_BALL,
+    /*
+        Kick the ball in alternating PI / 4 rotations softly
+
+        WHEN controlling ball, not threatened, no pass or goal possible.
+        THEN -> CHASE_BALL (after dribble kick)
+    */
+    DRIBBLE,
+    /*
+        WHEN nearest player to BSS for currently controlling player:
+        - _Arrive_ at BSS
+        - Ensure facing ball
+        - If goal shot possible, request pass from currently controlling player.
+        UNTIL ball received, -> RECEIVE_BALL
+        OR lose control of ball, RETURN_TO_HOME_REGION
+    */
+    SUPPORT_ATTACKER
+};
+
+enum struct GoalkeeperState {
+    /*
+        Goalkeeper will _interpose_ between the ball and the goal line (rear),
+        following a semicircle radius
+
+        WHEN done with INTERCEPT_BALL
+        OR done with PUT_BALL_BACK_IN_PLAY
+        (this state is the default behavior of the goalkeeper)
+    */
+    TEND_GOAL,
+    /*
+        Return to home region
+        UNTIL ???
+    */
+    RETURN_HOME,
+    /*
+        1. Set all team players to home region and wait for them all to arrive.
+        2. Try to make pass as able.
+        3. Return to TEND_GOAL
+    */
+    PUT_BALL_BACK_IN_PLAY,
+    /*
+        INTERCEPT_BALL if the opponent has control of the ball and are within
+        threat range. Follow ball with _Pursuit_.
+
+        UNTIL out of goal range, -> ReturnHome
+            UNLESS closest player to ball, then continue _Pursuit_ out of 
+            range.
+        OR get ball, trap it, RETURN_HOME, PUT_BALL_BACK_IN_PLAY.
+
+    */
+    INTERCEPT_BALL
+};
 
 /* === Standalone Methods ================================================== */
 

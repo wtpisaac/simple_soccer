@@ -15,12 +15,12 @@
 /* === Constants =========================================================== */
 // Window
 constexpr int WINDOW_WIDTH = 1316;
-constexpr int WINDOW_HEIGHT = 720;
+constexpr int WINDOW_HEIGHT = 896;
 
 // Pitch 
 constexpr int PITCH_PANEL_PADDING_TOP = 16;
 constexpr int PITCH_PANEL_PADDING_SIDES = 16;
-constexpr int PITCH_PANEL_HEIGHT = WINDOW_HEIGHT - (2 * PITCH_PANEL_PADDING_TOP);
+constexpr int PITCH_PANEL_HEIGHT = 720 - (2 * PITCH_PANEL_PADDING_TOP);
 constexpr int PITCH_PANEL_WIDTH = WINDOW_WIDTH - (2 * PITCH_PANEL_PADDING_SIDES);
 constexpr int PITCH_PANEL_X = 0 + PITCH_PANEL_PADDING_SIDES;
 constexpr int PITCH_PANEL_Y = PITCH_PANEL_PADDING_TOP;
@@ -34,6 +34,8 @@ constexpr int PITCH_BORDER_HEIGHT = PITCH_PANEL_HEIGHT + (2 * PITCH_PANEL_PADDIN
 // Pitch Regions
 constexpr int PITCH_REGIONS_VERTICAL = 3;
 constexpr int PITCH_REGIONS_HORIZONTAL = 6;
+constexpr auto TOTAL_PITCH_REGIONS = PITCH_REGIONS_HORIZONTAL * PITCH_REGIONS_VERTICAL;
+static_assert(TOTAL_PITCH_REGIONS == 18, "Pitch region configuration out of band with book.");
 constexpr int PITCH_REGION_WIDTH = PITCH_PANEL_WIDTH / PITCH_REGIONS_HORIZONTAL;
 constexpr int PITCH_REGION_HEIGHT = PITCH_PANEL_HEIGHT / PITCH_REGIONS_VERTICAL;
 
@@ -91,6 +93,27 @@ pitchPanelCoordinate(
     };
 }
 
+// MARK: Home Region Coordinate Conversion
+
+Vector2
+pitchRegionPosition(
+    uint homeRegion
+) {
+    assert(homeRegion >= 0 && homeRegion < TOTAL_PITCH_REGIONS && "Home region out of bounds");
+
+    auto distance = TOTAL_PITCH_REGIONS - (homeRegion + 1);
+    auto pitchRegionX = distance / PITCH_REGIONS_VERTICAL;
+    auto pitchRegionY = distance % PITCH_REGIONS_VERTICAL;
+
+    auto x = (pitchRegionX * PITCH_REGION_WIDTH) + (PITCH_REGION_WIDTH / 2);
+    auto y = (pitchRegionY * PITCH_REGION_HEIGHT) + (PITCH_REGION_HEIGHT / 2);
+
+    return Vector2 {
+        .x = static_cast<float>(x),
+        .y = static_cast<float>(y)
+    };
+}
+
 float rotationFromVector(
     Vector2 vec
 ) {
@@ -113,6 +136,8 @@ struct std::hash<IVec2> {
     }
 };
 
+// TODO: Should Neighborhood be used? If so, should it incorporate field
+// regions?
 class Neighborhood {
 public:
     IVec2
@@ -182,8 +207,16 @@ private:
 
 /* === ECS Definitions ===================================================== */
 
+struct PlayerData {
+    uint homeRegion;
+};
+
 struct Position {
     Vector2 pos;
+};
+
+struct Rotation {
+    float heading;
 };
 
 struct Velocity {
@@ -305,6 +338,28 @@ enum struct GoalkeeperState {
 
 /* === Standalone Methods ================================================== */
 
+// TODO: Implement some of the mathematical computations from the book. We
+// will want to understand them, but we should just take the prior work.
+
+void initialize_field_and_players(
+    entt::registry& registry
+) {
+    // Spawn field players and goalkeepers here
+    // Goalkeepers at goal lines
+    // Field players at top middle, top leading cells
+    // that is, cell 12, 14, 11, 9, AND cell 8, 5, 6, 3
+    // goalkeepers cell 1 and 16. 
+
+    // Team A
+    for(uint i = 0; i < TOTAL_PITCH_REGIONS; i++) {
+        auto entity = registry.create();
+        registry.emplace<Position>(entity, Position { .pos = pitchRegionPosition(i) });
+        registry.emplace<PlayerData>(entity, PlayerData { .homeRegion = i });
+    }
+    
+    // Team B
+}
+
 /* === Leader-Follower Tracking ============================================ */
 
 struct GameState {
@@ -388,10 +443,38 @@ void update(
 void renderUI(
     bool& shouldExit
 ) {
+    // TODO: Should build controls to control game state.
+    GuiWindowBox(
+        Rectangle { 
+            .x = 0, 
+            .y = 0, 
+            .width = WINDOW_WIDTH, 
+            .height = WINDOW_HEIGHT 
+        },
+        ""
+    );
     shouldExit = false;
 }
 
-void renderPitch(
+void renderPlayers(
+    entt::registry& registry
+) {
+    auto view = registry.view<const PlayerData, const Position>();
+
+    view.each([](const PlayerData &, const Position &pos) {
+        DrawRectangleRec(
+            Rectangle {
+                .x = pos.pos.x,
+                .y = pos.pos.y,
+                .width = 44.0,
+                .height = 44.0
+            },
+            BLACK
+        );
+    });
+}
+
+void renderGame(
     entt::registry& registry
 ) {
     // Draw bordered area under pitch 
@@ -462,6 +545,9 @@ void renderPitch(
         2.0f, WHITE
     );
 
+    // Render players
+    renderPlayers(registry);
+
     EndScissorMode();
 }
 
@@ -473,7 +559,7 @@ void render(
     ClearBackground(RED);
 
     renderUI(shouldExit);
-    renderPitch(registry);
+    renderGame(registry);
 
     EndDrawing();
 }
@@ -497,6 +583,8 @@ int main()
         APPLICATION_TITLE
     );
     SetTargetFPS(60);
+
+    initialize_field_and_players(gameState.registry);
 
     // Run loop
     while(!WindowShouldClose() && !shouldExit) {

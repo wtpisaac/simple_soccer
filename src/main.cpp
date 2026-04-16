@@ -43,18 +43,8 @@ constexpr int PITCH_REGION_HEIGHT = PITCH_PANEL_HEIGHT / PITCH_REGIONS_VERTICAL;
 constexpr float GOAL_OFFSET = static_cast<float>(PITCH_REGION_WIDTH) / 3.0f;
 constexpr float CENTER_CIRCLE_RADIUS = static_cast<float>(PITCH_REGION_WIDTH);
 
-// Neighborhood Processing
-constexpr float NEIGHBORHOOD_CELL_SIZE = 60.0;
-
 // Application Title
 constexpr const char* APPLICATION_TITLE = "Simple Soccer";
-
-// Fundamental Structures
-struct IVec2 {
-    int x;
-    int y;
-    bool operator==(const IVec2&) const = default;
-};
 
 // Coordinate conversion for pitch panel
 template <typename T>
@@ -80,16 +70,6 @@ pitchPanelCoordinate(
     return Vector2 {
         v.x + PITCH_PANEL_X,
         v.y + PITCH_PANEL_Y
-    };
-}
-
-constexpr IVec2
-pitchPanelCoordinate(
-    IVec2 v
-) {
-    return IVec2 {
-        .x = v.x + PITCH_PANEL_X,
-        .y = v.y + PITCH_PANEL_Y
     };
 }
 
@@ -126,85 +106,6 @@ float rotationFromVector(
     return degs;
 }
 
-template<>
-struct std::hash<IVec2> {
-    std::size_t operator()(const IVec2& v) const noexcept {
-        auto hash = std::hash<int>{}(v.x);
-        // hash combine algorithm from Boost - no clue how this works...
-        hash ^= std::hash<int>{}(v.y) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-        return hash;
-    }
-};
-
-// TODO: Should Neighborhood be used? If so, should it incorporate field
-// regions?
-class Neighborhood {
-public:
-    IVec2
-    addEntityToNeighborhood(
-        entt::entity entity,
-        IVec2 iCoordinates
-    ) {
-        auto& list = this->map[iCoordinates];
-        list.push_back(entity);
-        return iCoordinates;
-    }
-
-    void
-    removeEntityFromNeighborhood(
-        entt::entity entity,
-        IVec2 iCoordinates
-    ) {
-        auto& list = this->getNeighborhoodListRef(iCoordinates);
-        std::erase(list, entity);
-    }
-
-    std::vector<entt::entity>&
-    getNeighborhoodListRef(
-        IVec2 coordinates
-    ) {
-        auto& list = this->map[coordinates];
-        return list;
-    }
-
-    std::vector<entt::entity>&
-    getNeighborhoodListRef(
-        Vector2 coordinates
-    ) {
-        auto iCoordinates = vecToNeighborhoodIVec(coordinates);
-        auto& list = this->map[iCoordinates];
-        return list;
-    }
-
-    static
-    IVec2 vecToNeighborhoodIVec(
-        Vector2 fVec
-    ) {
-        auto x = static_cast<int>(fVec.x / NEIGHBORHOOD_CELL_SIZE);
-        auto y = static_cast<int>(fVec.y / NEIGHBORHOOD_CELL_SIZE);
-
-        return IVec2 {
-            .x = x,
-            .y = y
-        };
-    };
-private:
-    /*
-        Making a sidenote - we would need to think about having this map more 
-        carefully if we were parallelizing this, either by making sure the
-        neighborhood was not updated during other operations, since the
-        unordered dense does not preserve stability of pointers for mutating
-        operations.
-
-        In our case, we will update neighborhood positions in a distinct
-        phase from making use of the array pointers, and those pointers
-        will not live long, and we are not doing any parallel logic for
-        this demo, so none of this matters too much.
-    */
-
-    ankerl::unordered_dense::map<IVec2, std::vector<entt::entity>> map;
-};
-
 /* === ECS Definitions ===================================================== */
 
 struct PlayerData {
@@ -221,10 +122,6 @@ struct Rotation {
 
 struct Velocity {
     Vector2 velocity;
-};
-
-struct Neighborhoodable {
-    IVec2 lastSetICoordinates;
 };
 
 /* === Standalone Methods ================================================== */
@@ -255,7 +152,6 @@ void initialize_field_and_players(
 
 struct GameState {
     entt::registry registry;
-    Neighborhood neighborhood;
 };
 
 /* === Input =============================================================== */
@@ -296,37 +192,11 @@ void apply_velocity_to_position_system(
     });
 }
 
-// TODO: Deletion support for neighborhood system
-// TODO: General deletion approach rethink
-
-void update_neighborhoods_system(
-    GameState &gameState
-) {
-    auto view = gameState.registry.view<const Position, Neighborhoodable>();
-
-    view.each([&gameState](entt::entity entity, const Position &pos, Neighborhoodable &neighborhood) {
-        IVec2 newICoordinates = Neighborhood::vecToNeighborhoodIVec(pos.pos);
-        if(newICoordinates != neighborhood.lastSetICoordinates) {
-            gameState.neighborhood.removeEntityFromNeighborhood(
-                entity,
-                neighborhood.lastSetICoordinates
-            );
-            gameState.neighborhood.addEntityToNeighborhood(
-                entity,
-                newICoordinates
-            );
-            neighborhood.lastSetICoordinates = newICoordinates;
-        }
-    });
-}
-
 void update(
     GameState &gameState
 ) {
     acceleration_system(gameState.registry);
     apply_velocity_to_position_system(gameState.registry);
-
-    update_neighborhoods_system(gameState);
 }
 
 /* === Rendering =========================================================== */

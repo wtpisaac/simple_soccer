@@ -259,7 +259,7 @@ void renderPlayers(
                 .width = 44.0,
                 .height = 44.0
             },
-            BLACK
+            BROWN
         );
     });
 }

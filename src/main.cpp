@@ -69,6 +69,7 @@ constexpr float CENTER_CIRCLE_RADIUS = static_cast<float>(PITCH_REGION_WIDTH);
 // Application Title
 constexpr const char* APPLICATION_TITLE = "Simple Soccer";
 
+/* === Pitch Panel ========================================================= */
 // Coordinate conversion for pitch panel
 template <typename T>
 constexpr T
@@ -96,7 +97,7 @@ pitchPanelCoordinate(
     };
 }
 
-// MARK: Home Region Coordinate Conversion
+/* === Pitch Region ======================================================== */
 
 Vector2
 pitchRegionPosition(
@@ -129,7 +130,12 @@ float rotationFromVector(
     return degs;
 }
 
-/* === ECS Definitions ===================================================== */
+/* === State ========================================================== */
+struct GameState {
+    entt::registry registry;
+};
+
+/* === Components ===================================================== */
 
 struct PlayerData {
     uint homeRegion;

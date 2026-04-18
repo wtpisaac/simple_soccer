@@ -134,6 +134,7 @@ float rotationFromVector(
 /* === State ========================================================== */
 struct GameState {
     entt::registry registry;
+    entt::entity ball {entt::null};
     uint8_t teamAGoals {0};
     uint8_t teamBGoals {0};
 };
@@ -156,14 +157,17 @@ struct Velocity {
     Vector2 velocity;
 };
 
+struct Ball {};
+
 /* === Standalone Methods ================================================== */
 
 // TODO: Implement some of the mathematical computations from the book. We
 // will want to understand them, but we should just take the prior work.
 
 void initialize_field_and_players(
-    entt::registry& registry
+    GameState &gameState
 ) {
+    auto &registry = gameState.registry;
     // Spawn field players and goalkeepers here
     // Goalkeepers at goal lines
     // Field players at top middle, top leading cells
@@ -206,6 +210,16 @@ void initialize_field_and_players(
     auto teamBGoalkeeper = registry.create();
     registry.emplace<Position>(teamBGoalkeeper, Position { .pos = pitchRegionPosition(1) });
     registry.emplace<PlayerData>(teamBGoalkeeper, PlayerData { .homeRegion = 1 });
+
+    // Ball
+    auto ball = registry.create();
+    registry.emplace<Position>(
+        ball,
+        Position {
+            .pos = Vector2 { (float)pitchPanelX(PITCH_PANEL_WIDTH / 2), (float)pitchPanelY(PITCH_PANEL_HEIGHT / 2) }
+        }
+    );
+    gameState.ball = ball;
 }
 
 /* === Input =============================================================== */
@@ -286,6 +300,20 @@ void renderUI(
     );
 }
 
+void renderBall(
+    GameState &gameState
+) {
+    auto& registry = gameState.registry;
+    auto& pos = registry.get<Position>(gameState.ball);
+
+    DrawCircle(
+        pos.pos.x,
+        pos.pos.y,
+        22,
+        DARKGRAY
+    );
+}
+
 void renderPlayers(
     entt::registry& registry
 ) {
@@ -305,8 +333,9 @@ void renderPlayers(
 }
 
 void renderGame(
-    entt::registry& registry
+    GameState &gameState
 ) {
+    auto& registry = gameState.registry;
     // Draw bordered area under pitch 
     DrawRectangleRec(
         Rectangle {
@@ -375,7 +404,8 @@ void renderGame(
         2.0f, WHITE
     );
 
-    // Render players
+    // Render entities
+    renderBall(gameState);
     renderPlayers(registry);
 
     EndScissorMode();
@@ -388,7 +418,7 @@ void render(
     ClearBackground(RED);
 
     renderUI(gameState);
-    renderGame(gameState.registry);
+    renderGame(gameState);
 
     EndDrawing();
 }
@@ -413,7 +443,7 @@ int main()
     );
     SetTargetFPS(60);
 
-    initialize_field_and_players(gameState.registry);
+    initialize_field_and_players(gameState);
 
     // Run loop
     while(!WindowShouldClose() && !shouldExit) {

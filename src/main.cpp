@@ -34,6 +34,7 @@
 #include <quill/LogMacros.h>
 
 #include "core/logger.hpp"
+#include "states/FieldPlayerState.hpp"
 
 /* === Constants =========================================================== */
 // Window
@@ -168,20 +169,42 @@ void initialize_field_and_players(
     // goalkeepers cell 1 and 16. 
 
     // Team A
-    for(uint i = 0; i < TOTAL_PITCH_REGIONS; i++) {
+    // Field players
+    const uint teamAFieldPlayerRegions[] {14, 11, 12, 9};
+    for(auto region: teamAFieldPlayerRegions) {
         auto entity = registry.create();
-        registry.emplace<Position>(entity, Position { .pos = pitchRegionPosition(i) });
-        registry.emplace<PlayerData>(entity, PlayerData { .homeRegion = i });
+        registry.emplace<Position>(entity, Position { .pos = pitchRegionPosition(region) });
+        registry.emplace<PlayerData>(entity, PlayerData { .homeRegion = region });
+        registry.emplace<FieldPlayerStateWait>(
+            entity,
+            FieldPlayerStateWait {
+                .at = pitchRegionPosition(region)
+            }
+        );
     }
+    // Goalkeeper
+    auto teamAGoalkeeper = registry.create();
+    registry.emplace<Position>(teamAGoalkeeper, Position { .pos = pitchRegionPosition(16) });
+    registry.emplace<PlayerData>(teamAGoalkeeper, PlayerData { .homeRegion = 16 });
     
     // Team B
+    const uint teamBFieldPlayerRegions[] {8, 5, 6, 3};
+    for(auto region: teamBFieldPlayerRegions) {
+        auto entity = registry.create();
+        registry.emplace<Position>(entity, Position { .pos = pitchRegionPosition(region) });
+        registry.emplace<PlayerData>(entity, PlayerData { .homeRegion = region });
+        registry.emplace<FieldPlayerStateWait>(
+            entity,
+            FieldPlayerStateWait {
+                .at = pitchRegionPosition(region)
+            }
+        );
+    }
+    // Goalkeeper
+    auto teamBGoalkeeper = registry.create();
+    registry.emplace<Position>(teamBGoalkeeper, Position { .pos = pitchRegionPosition(1) });
+    registry.emplace<PlayerData>(teamBGoalkeeper, PlayerData { .homeRegion = 1 });
 }
-
-/* === Leader-Follower Tracking ============================================ */
-
-struct GameState {
-    entt::registry registry;
-};
 
 /* === Input =============================================================== */
 

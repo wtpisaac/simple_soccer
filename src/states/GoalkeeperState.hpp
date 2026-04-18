@@ -19,6 +19,9 @@
     this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef SOCCER_GOALKEEPER_STATE_H
+#define SOCCER_GOALKEEPER_STATE_H
+
 /*
     Goalkeeper will _interpose_ between the ball and the goal line (rear),
     following a semicircle radius
@@ -53,3 +56,5 @@ struct GoalkeeperPutBallBackInPlay {};
 
 */
 struct GoalkeeperInterceptBall {};
+
+#endif

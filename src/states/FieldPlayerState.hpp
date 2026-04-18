@@ -19,6 +19,9 @@
     this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef SOCCER_FIELD_PLAYER_STATE_H
+#define SOCCER_FIELD_PLAYER_STATE_H
+
 #include <raylib.h>
 
 /*
@@ -103,3 +106,5 @@ struct FieldPlayerDribble {};
     OR lose control of ball, RETURN_TO_HOME_REGION
 */
 struct FieldPlayerSupportAttacker {};
+
+#endif

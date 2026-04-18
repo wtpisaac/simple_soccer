@@ -134,6 +134,8 @@ float rotationFromVector(
 /* === State ========================================================== */
 struct GameState {
     entt::registry registry;
+    uint8_t teamAGoals {0};
+    uint8_t teamBGoals {0};
 };
 
 /* === Components ===================================================== */
@@ -254,7 +256,7 @@ void update(
 /* === Rendering =========================================================== */
 
 void renderUI(
-    bool& shouldExit
+    GameState &gameState
 ) {
     // TODO: Should build controls to control game state.
     GuiWindowBox(
@@ -266,7 +268,22 @@ void renderUI(
         },
         ""
     );
-    shouldExit = false;
+
+    // Draw team scores
+    DrawText(
+        TextFormat("Team A: %u", gameState.teamAGoals),
+        PITCH_PANEL_PADDING_SIDES,
+        PITCH_PANEL_HEIGHT + PITCH_PANEL_PADDING_TOP + 32,
+        32,
+        BLACK
+    );
+    DrawText(
+        TextFormat("Team B: %u", gameState.teamBGoals),
+        PITCH_PANEL_PADDING_SIDES,
+        PITCH_PANEL_HEIGHT + PITCH_PANEL_PADDING_TOP + 64 + 16,
+        32,
+        BLACK
+    );
 }
 
 void renderPlayers(
@@ -365,14 +382,13 @@ void renderGame(
 }
 
 void render(
-    bool& shouldExit,
-    entt::registry& registry
+    GameState &gameState
 ) {
     BeginDrawing();
     ClearBackground(RED);
 
-    renderUI(shouldExit);
-    renderGame(registry);
+    renderUI(gameState);
+    renderGame(gameState.registry);
 
     EndDrawing();
 }
@@ -404,8 +420,7 @@ int main()
         processInput(gameState);
         update(gameState);
         render(
-            shouldExit,
-            gameState.registry
+            gameState
         );
     }
 

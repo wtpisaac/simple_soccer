@@ -35,6 +35,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_executable(
     simplesoccer
     src/main.cpp
+    src/physics.cpp
 )
 
 set_property(

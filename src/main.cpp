@@ -41,7 +41,7 @@
 constexpr int WINDOW_WIDTH = 1316;
 constexpr int WINDOW_HEIGHT = 896;
 
-// Pitch 
+// Pitch
 constexpr int PITCH_PANEL_PADDING_TOP = 16;
 constexpr int PITCH_PANEL_PADDING_SIDES = 16;
 constexpr int PITCH_PANEL_HEIGHT = 720 - (2 * PITCH_PANEL_PADDING_TOP);
@@ -124,7 +124,7 @@ float rotationFromVector(
 ) {
     auto nvec = Vector2Normalize(vec);
     auto rads = Vector2Angle(
-        Vector2{.y = -1.0}, 
+        Vector2{.y = -1.0},
         nvec
     );
     auto degs = (rads * RAD2DEG);
@@ -135,6 +135,7 @@ float rotationFromVector(
 struct GameState {
     entt::registry registry;
     entt::entity ball {entt::null};
+    entt::entity teams[2] {entt::null, entt::null};
     uint8_t teamAGoals {0};
     uint8_t teamBGoals {0};
 };
@@ -142,6 +143,7 @@ struct GameState {
 /* === Components ===================================================== */
 
 struct PlayerData {
+    entt::entity team;
     uint homeRegion;
 };
 
@@ -157,7 +159,13 @@ struct Velocity {
     Vector2 velocity;
 };
 
-struct Ball {};
+/*
+ * Note on Ball component:
+ * this doesn't seem necessary? the teams transition states when they gain control,
+ * is that necessary to reflect in a distinct component or is this naturally arising
+ * behavior?
+ * For now, I am not defining an explicit component.
+ */
 
 /* === Standalone Methods ================================================== */
 
@@ -172,15 +180,20 @@ void initialize_field_and_players(
     // Goalkeepers at goal lines
     // Field players at top middle, top leading cells
     // that is, cell 12, 14, 11, 9, AND cell 8, 5, 6, 3
-    // goalkeepers cell 1 and 16. 
+    // goalkeepers cell 1 and 16.
 
     // Team A
+    auto teamA = registry.create();
+
     // Field players
     const uint teamAFieldPlayerRegions[] {14, 11, 12, 9};
     for(auto region: teamAFieldPlayerRegions) {
         auto entity = registry.create();
         registry.emplace<Position>(entity, Position { .pos = pitchRegionPosition(region) });
-        registry.emplace<PlayerData>(entity, PlayerData { .homeRegion = region });
+        registry.emplace<PlayerData>(entity, PlayerData {
+            .team = teamA,
+            .homeRegion = region
+        });
         registry.emplace<FieldPlayerStateWait>(
             entity,
             FieldPlayerStateWait {
@@ -191,14 +204,22 @@ void initialize_field_and_players(
     // Goalkeeper
     auto teamAGoalkeeper = registry.create();
     registry.emplace<Position>(teamAGoalkeeper, Position { .pos = pitchRegionPosition(16) });
-    registry.emplace<PlayerData>(teamAGoalkeeper, PlayerData { .homeRegion = 16 });
-    
+    registry.emplace<PlayerData>(teamAGoalkeeper, PlayerData {
+        .team = teamA,
+        .homeRegion = 16
+    });
+
     // Team B
+    entt::entity teamB = registry.create();
+
     const uint teamBFieldPlayerRegions[] {8, 5, 6, 3};
     for(auto region: teamBFieldPlayerRegions) {
         auto entity = registry.create();
         registry.emplace<Position>(entity, Position { .pos = pitchRegionPosition(region) });
-        registry.emplace<PlayerData>(entity, PlayerData { .homeRegion = region });
+        registry.emplace<PlayerData>(entity, PlayerData {
+            .team = teamB,
+            .homeRegion = region
+        });
         registry.emplace<FieldPlayerStateWait>(
             entity,
             FieldPlayerStateWait {
@@ -209,7 +230,10 @@ void initialize_field_and_players(
     // Goalkeeper
     auto teamBGoalkeeper = registry.create();
     registry.emplace<Position>(teamBGoalkeeper, Position { .pos = pitchRegionPosition(1) });
-    registry.emplace<PlayerData>(teamBGoalkeeper, PlayerData { .homeRegion = 1 });
+    registry.emplace<PlayerData>(teamBGoalkeeper, PlayerData {
+        .team = teamB,
+        .homeRegion = 1
+    });
 
     // Ball
     auto ball = registry.create();
@@ -220,6 +244,10 @@ void initialize_field_and_players(
         }
     );
     gameState.ball = ball;
+
+    // Store teams
+    gameState.teams[0] = teamA;
+    gameState.teams[1] = teamB;
 }
 
 /* === Input =============================================================== */
@@ -274,11 +302,11 @@ void renderUI(
 ) {
     // TODO: Should build controls to control game state.
     GuiWindowBox(
-        Rectangle { 
-            .x = 0, 
-            .y = 0, 
-            .width = WINDOW_WIDTH, 
-            .height = WINDOW_HEIGHT 
+        Rectangle {
+            .x = 0,
+            .y = 0,
+            .width = WINDOW_WIDTH,
+            .height = WINDOW_HEIGHT
         },
         ""
     );
@@ -336,10 +364,10 @@ void renderGame(
     GameState &gameState
 ) {
     auto& registry = gameState.registry;
-    // Draw bordered area under pitch 
+    // Draw bordered area under pitch
     DrawRectangleRec(
         Rectangle {
-            .x = PITCH_BORDER_X, 
+            .x = PITCH_BORDER_X,
             .y = PITCH_BORDER_Y,
             .width = PITCH_BORDER_WIDTH,
             .height = PITCH_BORDER_HEIGHT
@@ -347,7 +375,7 @@ void renderGame(
         DARKGRAY
     );
     BeginScissorMode(
-        PITCH_PANEL_X, 
+        PITCH_PANEL_X,
         PITCH_PANEL_Y,
         PITCH_PANEL_WIDTH,
         PITCH_PANEL_HEIGHT

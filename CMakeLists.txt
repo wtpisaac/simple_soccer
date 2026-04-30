@@ -36,6 +36,8 @@ add_executable(
     simplesoccer
     src/main.cpp
     src/physics.cpp
+    src/core/math.cpp
+    src/logic/render.cpp
 )
 
 set_property(

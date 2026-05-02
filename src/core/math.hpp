@@ -26,7 +26,12 @@ pitchPanelY(
 constexpr Vector2
 pitchPanelCoordinate(
     Vector2 v
-);
+) {
+    return Vector2 {
+        v.x + PITCH_PANEL_X,
+        v.y + PITCH_PANEL_Y
+    };
+}
 
 Vector2
 pitchRegionPosition(

@@ -27,7 +27,8 @@
       "displayName": "Windows x64 Debug (ASan)",
       "description": "Sets Ninja generator, compilers, x64 architecture, build and install directory, debug build type with ASan enabled",
       "cacheVariables": {
-        "ENABLE_ASAN": true
+        "ENABLE_ASAN": true,
+        "DEBUG_RENDER_BSS": false
       }
     },
     {
@@ -50,7 +51,8 @@
       "inherits": "base-clang",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": true
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "DEBUG_RENDER_BSS": false
       }
     },
     {
@@ -61,7 +63,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
-        "ENABLE_ASAN": true
+        "ENABLE_ASAN": true,
+        "DEBUG_RENDER_BSS": false
       }
     },
     {

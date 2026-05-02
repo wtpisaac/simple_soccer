@@ -1,6 +1,9 @@
 #ifndef SOCCER_CONSTANTS_HPP
 #define SOCCER_CONSTANTS_HPP
 
+#include <cstdint>
+#include <raylib.h>
+
 /* === Constants =========================================================== */
 // Window
 constexpr int WINDOW_WIDTH = 1316;
@@ -31,6 +34,17 @@ constexpr int PITCH_REGION_HEIGHT = PITCH_PANEL_HEIGHT / PITCH_REGIONS_VERTICAL;
 // Pitch Lines
 constexpr float GOAL_OFFSET = static_cast<float>(PITCH_REGION_WIDTH) / 3.0f;
 constexpr float CENTER_CIRCLE_RADIUS = static_cast<float>(PITCH_REGION_WIDTH);
+
+// BSS
+constexpr uint8_t BSS_SLOTS_HORIZONTAL = 6;
+constexpr uint8_t BSS_SLOTS_VERTICAL = 5;
+static_assert(BSS_SLOTS_HORIZONTAL * BSS_SLOTS_VERTICAL == 30, "BSS slot configuration out of band with book.");
+
+// The BSS Area appears to be the width of one half the field minus the goal offset, and this performed on 
+// both sides (the goal and equivalent distance from the center). Thus, the below should create a "square radius"
+// for the BSS area to follow, where the BSS area should then be targeted to the center of the half of the arena
+// (depending on the team).
+constexpr int BSS_AREA_SIDE = (PITCH_PANEL_WIDTH / 2) - (GOAL_OFFSET * 2);
 
 // Application Title
 constexpr const char* APPLICATION_TITLE = "Simple Soccer";

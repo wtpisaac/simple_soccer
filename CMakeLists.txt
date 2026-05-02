@@ -18,12 +18,18 @@ set(
     CMAKE_CXX_STANDARD_REQUIRED
     ON
 )
+
 add_compile_options(-Wno-deprecated-declarations)
 enable_testing()
 
 option(
     ENABLE_ASAN
     "Enable address sanitizer"
+    OFF
+)
+option(
+    DEBUG_RENDER_BSS
+    "Render BSS positions"
     OFF
 )
 
@@ -86,6 +92,17 @@ target_link_libraries(
     raygui
     unordered_dense::unordered_dense
 )
+
+# Maps CMake cache option DEBUG_RENDER_BSS to the preprocessor (option() alone
+# does not define a C++ macro).
+if(DEBUG_RENDER_BSS)
+    target_compile_definitions(
+        simplesoccer
+        PRIVATE
+        DEBUG_RENDER_BSS=1
+    )
+endif()
+message(STATUS "DEBUG_RENDER_BSS (CMake option): ${DEBUG_RENDER_BSS}")
 
 if(ENABLE_ASAN)
     add_library(

@@ -5,6 +5,8 @@
 #include <sys/types.h>
 #include <entt/entt.hpp>
 
+struct DebugMarker {};
+
 struct PlayerData {
     entt::entity team;
     uint homeRegion;

@@ -53,6 +53,23 @@ void renderBall(
     );
 }
 
+#if DEBUG_RENDER_BSS
+void renderDebugMarkers(
+    entt::registry& registry
+) {
+    auto view = registry.view<const DebugMarker, const Position>();
+
+    view.each([](const Position &pos) {
+        DrawCircle(
+            pos.pos.x,
+            pos.pos.y,
+            2,
+            RED
+        );
+    });
+}
+#endif
+
 void renderPlayers(
     entt::registry& registry
 ) {
@@ -146,6 +163,9 @@ void renderGame(
     // Render entities
     renderBall(gameState);
     renderPlayers(registry);
+    #if DEBUG_RENDER_BSS
+    renderDebugMarkers(registry);
+    #endif
 
     EndScissorMode();
 }

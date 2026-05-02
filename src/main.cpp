@@ -38,6 +38,7 @@
 #include "core/logger.hpp"
 #include "states/FieldPlayerState.hpp"
 #include "states/GameState.hpp"
+#include "logic/bss.hpp"
 #include "logic/components.hpp"
 #include "logic/render.hpp"
 
@@ -118,6 +119,20 @@ void initialize_field_and_players(
         }
     );
     gameState.ball = ball;
+
+    // If relevant, debug markers for BSS positions
+    #if DEBUG_RENDER_BSS
+    for(auto pos: TEAM_A_BSS_POSITIONS) {
+        auto entity = registry.create();
+        registry.emplace<Position>(entity, Position { .pos = pos });
+        registry.emplace<DebugMarker>(entity);
+    }
+    for(auto pos: TEAM_B_BSS_POSITIONS) {
+        auto entity = registry.create();
+        registry.emplace<Position>(entity, Position { .pos = pos });
+        registry.emplace<DebugMarker>(entity);
+    }
+    #endif
 
     // Store teams
     gameState.teams[0] = teamA;

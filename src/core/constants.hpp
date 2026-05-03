@@ -46,6 +46,17 @@ static_assert(BSS_SLOTS_HORIZONTAL * BSS_SLOTS_VERTICAL == 30, "BSS slot configu
 // (depending on the team).
 constexpr int BSS_AREA_SIDE = (PITCH_PANEL_WIDTH / 2) - (GOAL_OFFSET * 2);
 
+// Player
+constexpr float PLAYER_MAX_DISTANCE_PER_SECOND = 25.0f;
+constexpr float PLAYER_RADIUS = 44.0f;
+
+// Ball
+constexpr float BALL_MAX_DISTANCE_PER_SECOND = 50.0f;
+constexpr float BALL_MASS = 1.0f;
+constexpr float BALL_FRICTION = 5.0f;
+constexpr float BALL_RESET_FORCE = 50.0f;
+constexpr float BALL_RADIUS = 22.0f;
+
 // Application Title
 constexpr const char* APPLICATION_TITLE = "Simple Soccer";
 

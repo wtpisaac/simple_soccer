@@ -22,6 +22,7 @@ namespace Physics {
         Vector2 x0,
         Vector2 x1,
         double mass,
+        double friction,
         double resettingForce
     );
 }

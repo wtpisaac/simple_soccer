@@ -38,7 +38,7 @@ Physics::FuturePosition(
 }
 
 double
-TimeToCoverDistanceWithResettingForce(
+Physics::TimeToCoverDistanceWithResettingForce(
     Vector2 x0,
     Vector2 x1,
     double mass,

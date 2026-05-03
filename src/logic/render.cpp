@@ -48,7 +48,7 @@ void renderBall(
     DrawCircle(
         pos.pos.x,
         pos.pos.y,
-        22,
+        BALL_RADIUS,
         DARKGRAY
     );
 }
@@ -80,8 +80,8 @@ void renderPlayers(
             Rectangle {
                 .x = pos.pos.x,
                 .y = pos.pos.y,
-                .width = 44.0,
-                .height = 44.0
+                .width = PLAYER_RADIUS,
+                .height = PLAYER_RADIUS
             },
             BROWN
         );

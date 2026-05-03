@@ -44,6 +44,7 @@ add_executable(
     src/physics.cpp
     src/core/math.cpp
     src/logic/render.cpp
+    src/logic/logic.cpp
 )
 
 set_property(

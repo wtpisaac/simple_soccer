@@ -5,7 +5,13 @@
 #include <sys/types.h>
 #include <entt/entt.hpp>
 
-struct DebugMarker {};
+// Tags for team membership
+struct OfTeamA {};
+struct OfTeamB {};
+
+struct BssMarker {
+    float score;
+};
 
 struct PlayerData {
     entt::entity team;

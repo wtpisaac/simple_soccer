@@ -38,7 +38,8 @@ constexpr float CENTER_CIRCLE_RADIUS = static_cast<float>(PITCH_REGION_WIDTH);
 // BSS
 constexpr uint8_t BSS_SLOTS_HORIZONTAL = 6;
 constexpr uint8_t BSS_SLOTS_VERTICAL = 5;
-static_assert(BSS_SLOTS_HORIZONTAL * BSS_SLOTS_VERTICAL == 30, "BSS slot configuration out of band with book.");
+constexpr uint8_t TOTAL_BSS_SLOTS = BSS_SLOTS_HORIZONTAL * BSS_SLOTS_VERTICAL;
+static_assert(TOTAL_BSS_SLOTS == 30, "BSS slot configuration out of band with book.");
 
 // The BSS Area appears to be the width of one half the field minus the goal offset, and this performed on 
 // both sides (the goal and equivalent distance from the center). Thus, the below should create a "square radius"

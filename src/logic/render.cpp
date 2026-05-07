@@ -54,16 +54,16 @@ void renderBall(
 }
 
 #if DEBUG_RENDER_BSS
-void renderDebugMarkers(
+void debugRenderBssMarkers(
     entt::registry& registry
 ) {
-    auto view = registry.view<const DebugMarker, const Position>();
+    auto view = registry.view<const BssMarker, const Position>();
 
-    view.each([](const Position &pos) {
+    view.each([](const BssMarker &marker, const Position &pos) {
         DrawCircle(
             pos.pos.x,
             pos.pos.y,
-            2,
+            2 * marker.score,
             RED
         );
     });
@@ -164,7 +164,7 @@ void renderGame(
     renderBall(gameState);
     renderPlayers(registry);
     #if DEBUG_RENDER_BSS
-    renderDebugMarkers(registry);
+    debugRenderBssMarkers(registry);
     #endif
 
     EndScissorMode();

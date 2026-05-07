@@ -120,19 +120,19 @@ void initialize_field_and_players(
     );
     gameState.ball = ball;
 
-    // If relevant, debug markers for BSS positions
-    #if DEBUG_RENDER_BSS
+    // Team BSS positions
     for(auto pos: TEAM_A_BSS_POSITIONS) {
         auto entity = registry.create();
+        registry.emplace<OfTeamA>(entity);
         registry.emplace<Position>(entity, Position { .pos = pos });
-        registry.emplace<DebugMarker>(entity);
+        registry.emplace<BssMarker>(entity, BssMarker { .score = 1.0f });
     }
     for(auto pos: TEAM_B_BSS_POSITIONS) {
         auto entity = registry.create();
+        registry.emplace<OfTeamB>(entity);
         registry.emplace<Position>(entity, Position { .pos = pos });
-        registry.emplace<DebugMarker>(entity);
+        registry.emplace<BssMarker>(entity, BssMarker { .score = 1.0f });
     }
-    #endif
 
     // Store teams
     gameState.teams[0] = teamA;
